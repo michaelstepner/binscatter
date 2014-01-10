@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 7.01  14oct2013}{...}
+{* *! version 7.02  24nov2013}{...}
 {viewerjumpto "Syntax" "binscatter##syntax"}{...}
 {viewerjumpto "Description" "binscatter##description"}{...}
 {viewerjumpto "Options" "binscatter##options"}{...}
@@ -33,6 +33,7 @@ where {it:varlist} is
 {synoptline}
 {syntab :Main}
 {synopt :{opth by(varname)}}plot separate series for each group (see {help binscatter##by_notes:important notes below}){p_end}
+{synopt :{opt med:ians}}plot within-bin medians instead of means{p_end}
 
 {syntab :Bins}
 {synopt :{opth n:quantiles(#)}}number of equal-sized bins to be created; default is {bf:20}{p_end}
@@ -114,6 +115,10 @@ on the residuals you constructed.
 using the unconditional quantiles of the x-variable.  It does not bin the x-variable separately for each by-value.
 If you wish to use a different binning procedure (such as constructing equal-sized bins separately for each
 by-value), you can construct a variable containing your desired bins beforehand, then run {cmd:binscatter} with {opt xq()}.
+
+{phang}{opt med:ians} creates the binned scatterplot using the median x- and y-value within each bin, rather than the mean.
+This option only affects the scatter points; it does not, for instance, cause {opt linetype(lfit)}
+to use quantile regression instead of OLS when drawing a fit line.
 
 {dlgtab:Bins}
 
