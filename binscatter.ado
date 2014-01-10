@@ -1,4 +1,4 @@
-*! version 6.02  5oct2013  Michael Stepner, stepner@mit.edu
+*! version 6.03  9oct2013  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -14,9 +14,9 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 program define binscatter, eclass
 	version 11
 	
-	syntax varlist(min=2 numeric) [if] [in] [aweight fweight pweight], [by(varname) ///
+	syntax varlist(min=2 numeric) [if] [in] [aweight fweight], [by(varname) ///
 		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) ///
-		CONTROLs(varlist numeric ts fv) absorb(varname) NOAddmean ///
+		CONTROLs(varlist numeric ts fv) absorb(varname) noAddmean ///
 		LINEtype(string) rd(numlist ascending) reportreg ///
 		COLors(string) MColors(string) LColors(string) Msymbols(string) ///
 		savegraph(string) savedata(string) replace ///
@@ -167,8 +167,9 @@ program define binscatter, eclass
 			* by-variable is string => use levelsof (which is much slower)
 			quietly levelsof `by' if `touse'
 			local byvals `"`r(levels)'"'
-			local bynum : word count `"`byvals'"'
+			local bynum : word count `r(levels)'
 		}
+		local bystring=_rc
 	}
 	else local bynum=1
 
@@ -192,12 +193,12 @@ program define binscatter, eclass
 			tempvar residvar
 			`regtype' `var' `controls' `wt' if `touse', `absorb'
 			predict `residvar' if e(sample), residuals
-			label variable `residvar' "`var'"
-			if ("`noaddmean'"=="") {
+			if ("`addmean'"!="noaddmean") {
 				summarize `var' `wt' if `touse', meanonly
 				replace `residvar'=`residvar'+r(mean)
 			}
 			
+			label variable `residvar' "`var'"
 			if `firstloop'==1 {
 				local x_r `residvar'
 				local firstloop=0
@@ -254,7 +255,10 @@ program define binscatter, eclass
 				* set conditions on reg
 				local conds `touse'
 				
-				if ("`by'"!="") local conds `conds' & `by'==`byval'
+				if ("`by'"!="" ) {
+					if (`bystring'==0) local conds `conds' & `by'==`byval'
+					else local conds `conds' & `by'=="`byval'"
+				}
 				
 				if ("`rd'"!="") {
 					if (`counter_rd'==1) local conds `conds' & `x_r'<=`1'
@@ -419,7 +423,10 @@ program define binscatter, eclass
 		
 			* set conditions
 			local conds `touse'
-			if ("`by'"!="") local conds `conds' & `by'==`byval'
+			if ("`by'"!="" ) {
+				if (`bystring'==0) local conds `conds' & `by'==`byval'
+				else local conds `conds' & `by'=="`byval'"
+			}
 			
 			* compute tab
 			__tab_sum_parse `xq' if `conds' `wt', sum(`depvar') means wrap nolabel noobs	
@@ -762,7 +769,10 @@ end
 program define __tab_sum_parse, rclass
 	version 11
 	
-	syntax anything(everything equalok name=cmd id="command"), [*]
+	syntax anything(everything equalok name=cmd id="command") [aweight fweight], [*]
+
+	* Create convenient weight local
+	if ("`weight'"!="") local wt [`weight'`exp']
 	
 	* Start the log
 	tempfile log_file
@@ -770,7 +780,7 @@ program define __tab_sum_parse, rclass
 	quietly log using `log_file', name(__tab_log) replace text
 	
 	* Run -tab, sum()- command
-	noisily tab `cmd', `options'
+	noisily tab `cmd' `wt', `options'
 	
 	* Close the log
 	qui log close __tab_log
@@ -832,7 +842,8 @@ program define __tab_sum_parse, rclass
 	
 end
 
-*** copy of: version 1.20  7sep2013  Michael Stepner, stepner@mit.edu
+
+*** copy of: version 1.21  8oct2013  Michael Stepner, stepner@mit.edu
 program define fastxtile, rclass
 	version 11
 
@@ -923,7 +934,7 @@ program define fastxtile, rclass
 
 		* Store quantile boundaries in list
 		forvalues i=1/`=`nquantiles'-1' {
-			local cutvallist `cutvallist',`r(r`i')'
+			local cutvallist `cutvallist' r(r`i')
 		}
 	}
 	else if "`cutpoints'"!="" { /***** CUTPOINTS *****/
@@ -949,7 +960,7 @@ program define fastxtile, rclass
 			local nquantiles = r(r) + 1
 			
 			forvalues i=1/`r(r)' {
-				local cutvallist `cutvallist',`=`cutvals'[`i',1]'
+				local cutvallist `cutvallist' `cutvals'[`i',1]
 			}
 		}
 	}
@@ -961,16 +972,18 @@ program define fastxtile, rclass
 		
 		* parse numlist
 		numlist "`cutvalues'"
+		local cutvallist `"`r(numlist)'"'
 		local nquantiles=wordcount(`"`r(numlist)'"')+1
-		
-		* put commas between each value
-		local cutvallist `",`r(numlist)'"'
-		local cutvallist : subinstr local cutvallist " " ",", all
-	
 	}
 
+	* Pick data type for quantile variable
+	if (`nquantiles'<=100) local qtype byte
+	else if (`nquantiles'<=32,740) local qtype int
+	else local qtype long
+
 	* Create quantile variable
-	qui gen `varlist'=1+irecode(`exp'`cutvallist') if `touse'
+	local cutvalcommalist : subinstr local cutvallist " " ",", all
+	qui gen `qtype' `varlist'=1+irecode(`exp',`cutvalcommalist') if `touse'
 	label var `varlist' "`nquantiles' quantiles of `exp'"
 	
 	* Return values
@@ -979,7 +992,6 @@ program define fastxtile, rclass
 	
 	return scalar N = `popsize'
 	
-	local cutvallist : subinstr local cutvallist "," " ", all
 	tokenize `"`cutvallist'"'
 	forvalues i=`=`nquantiles'-1'(-1)1 {
 		return scalar r`i' = ``i''
