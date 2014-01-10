@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 6.01  4oct2013}{...}
+{* *! version 6.02  5oct2013}{...}
 {viewerjumpto "Syntax" "binscatter##syntax"}{...}
 {viewerjumpto "Description" "binscatter##description"}{...}
 {viewerjumpto "Options" "binscatter##options"}{...}
@@ -87,6 +87,7 @@ Binned scatterplots provide a non-parametric way of visualizing the relationship
 With a large number of observations, a scatterplot that plots every data point would become too crowded
 to interpret visually.  {cmd:binscatter} groups the x-axis variable into equal-sized bins, computes the
 mean of the x-axis and y-axis variables within each bin, then creates a scatterplot of these data points.
+The result is a non-parametric visualization of the conditional expectation function.
 
 {pstd}
 {opt binscatter} provides built-in options to control for covariates before plotting the relationship
@@ -204,7 +205,7 @@ loads the scatterpoint data, labels the variables, and plots the binscatter grap
 
 {phang}{opt nofastxtile} forces the use of {cmd:xtile} instead of {cmd:fastxtile} to compute bins.  There is no situation where this should
 be necessary or useful.  The {cmd:fastxile} program generates identical results to {cmd:xtile}, but runs faster on large datasets, and has
-additional options for random sampling which may be useful increase speed.
+additional options for random sampling which may be useful to increase speed.
 
 {pmore}{cmd:fastxtile} is built into the {cmd:binscatter} code, but may also be installed
 separately from SSC ({stata ssc install fastxtile:click here to install}) for use outside of {cmd:binscatter}.

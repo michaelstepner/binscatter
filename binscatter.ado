@@ -1,4 +1,4 @@
-*! version 6.01  4oct2013  Michael Stepner, stepner@mit.edu
+*! version 6.02  5oct2013  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -28,6 +28,11 @@ program define binscatter, eclass
 
 	* Create convenient weight local
 	if ("`weight'"!="") local wt [`weight'`exp']
+	
+	* Close files that could have remained open in a binscatter crash
+	capture log close __tab_log
+	capture file close __tab_log
+	capture file close __savedata
 	
 	
 	***** Begin legacy option compatibility code
@@ -759,21 +764,8 @@ program define __tab_sum_parse, rclass
 	
 	syntax anything(everything equalok name=cmd id="command"), [*]
 	
-	* Find a working tempfile to log to (fixes a Windows-only crash)
-	local no_inf_loop=0
-		
-	while `no_inf_loop'==0 | (_rc!=0 & `no_inf_loop'<100) {
-		tempfile log_file
-		capture confirm new file `log_file'
-		
-		local ++no_inf_loop
-	}
-	if _rc!=0 {
-		di as error "could not open a tempfile to save log"
-		exit
-	}
-	
 	* Start the log
+	tempfile log_file
 	capture log close __tab_log
 	quietly log using `log_file', name(__tab_log) replace text
 	
@@ -835,6 +827,8 @@ program define __tab_sum_parse, rclass
 		return matrix yval=`yval'
 		return matrix xval=`xval'
 	}
+	
+	file close __tab_log
 	
 end
 
