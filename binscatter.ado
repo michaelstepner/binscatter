@@ -1,4 +1,4 @@
-*! version 7.01  14oct2013  Michael Stepner, stepner@mit.edu
+*! version 7.02  24nov2013  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -15,7 +15,7 @@ program define binscatter, eclass sortpreserve
 	version 12.1
 	
 	syntax varlist(min=2 numeric) [if] [in] [aweight fweight], [by(varname) ///
-		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) ///
+		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) MEDians ///
 		CONTROLs(varlist numeric ts fv) absorb(varname) noAddmean ///
 		LINEtype(string) rd(numlist ascending) reportreg ///
 		COLors(string) MColors(string) LColors(string) Msymbols(string) ///
@@ -447,7 +447,7 @@ program define binscatter, eclass sortpreserve
 			matrix `xbin_means'=`xq_values'
 		}
 		else {
-			means_in_boundaries `x_r' `wt', bounds(`xq_boundaries')
+			means_in_boundaries `x_r' `wt', bounds(`xq_boundaries') `medians'
 			matrix `xbin_means'=r(means)
 		}
 
@@ -456,7 +456,7 @@ program define binscatter, eclass sortpreserve
 		foreach depvar of varlist `y_vars_r' {
 			local ++counter_depvar
 
-			means_in_boundaries `depvar' `wt', bounds(`xq_boundaries')
+			means_in_boundaries `depvar' `wt', bounds(`xq_boundaries') `medians'
 
 			* store to matrix
 			if (`b'==1) {
@@ -801,14 +801,25 @@ end
 program define means_in_boundaries, rclass
 	version 12.1
 
-	syntax varname(numeric) [aweight fweight iweight], BOUNDsmat(name)
+	syntax varname(numeric) [aweight fweight], BOUNDsmat(name) [MEDians]
+	
+	* Create convenient weight local
+	if ("`weight'"!="") local wt [`weight'`exp']
 	
 	local r=rowsof(`boundsmat')
 	matrix means=J(`r',1,.)
 	
-	forvalues i=1/`r' {
-		sum `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]', meanonly
-		matrix means[`i',1]=r(mean)
+	if ("`medians'"!="medians") {
+		forvalues i=1/`r' {
+			sum `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]' `wt', meanonly
+			matrix means[`i',1]=r(mean)
+		}
+	}
+	else {
+		forvalues i=1/`r' {
+			_pctile `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]' `wt', percentiles(50)
+			matrix means[`i',1]=r(r1)
+		}
 	}
 	
 	return clear
