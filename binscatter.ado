@@ -1,4 +1,4 @@
-*! version 6.04  9oct2013  Michael Stepner, stepner@mit.edu
+*! version 7.00  12oct2013  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -11,7 +11,7 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 * Why did I include a formal license? Jeff Atwood gives good reasons: http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
 
 
-program define binscatter, eclass
+program define binscatter, eclass sortpreserve
 	version 12.1
 	
 	syntax varlist(min=2 numeric) [if] [in] [aweight fweight], [by(varname) ///
@@ -28,12 +28,6 @@ program define binscatter, eclass
 
 	* Create convenient weight local
 	if ("`weight'"!="") local wt [`weight'`exp']
-	
-	* Close files that could have remained open in a binscatter crash
-	capture log close __tab_log
-	capture file close __tab_log
-	capture file close __savedata
-	
 	
 	***** Begin legacy option compatibility code
 	
@@ -79,7 +73,7 @@ program define binscatter, eclass
 	}
 	
 	if ("`method'"!="") {
-		di as text "NOTE: method() is no longer a recognized option, and will be ignored. binscatter now uses method(log) but without a need for two instances"
+		di as text "NOTE: method() is no longer a recognized option, and will be ignored. binscatter now always uses the fastest method without a need for two instances"
 	}
 	
 	if ("`unique'"!="") {
@@ -89,12 +83,6 @@ program define binscatter, eclass
 	***** End legacy option capatibility code
 
 	*** Perform checks
-
-	* Check that binscatter isn't being run quietly
-	if !c(noisily) {
-		di as error "binscatter cannot be run quietly"
-		exit
-	}
 
 	* Set default linetype and check valid
 	if ("`linetype'"=="") local linetype lfit
@@ -121,6 +109,8 @@ program define binscatter, eclass
 			di as error "xq() must contain only positive integers."
 			exit
 		}
+		
+		if ("`controls'`absorb'"!="") di as text "warning: xq() is specified in combination with controls() or absorb(). note that binning takes places after residualization, so the xq variable should contain bins of the residuals."
 	}
 	if `nquantiles'!=20 & ("`xq'"!="" | "`discrete'"!="") {
 		di as error "Cannot specify nquantiles in combination with discrete or an xq variable."
@@ -144,6 +134,10 @@ program define binscatter, eclass
 	* Mark sample (reflects the if/in conditions, and includes only nonmissing observations)
 	marksample touse
 	markout `touse' `by' `xq' `controls' `absorb', strok
+	qui count if `touse'
+	local samplesize=r(N)
+	local touse_first=_N-`samplesize'+1
+	local touse_last=_N
 
 	* Parse varlist into y-vars and x-var
 	local x_var=word("`varlist'",-1)
@@ -152,28 +146,28 @@ program define binscatter, eclass
 
 	* Check number of unique byvals & create local storing byvals
 	if "`by'"!="" {
+		local byvarname `by'
+	
 		capture confirm numeric variable `by'
-		if !_rc { 
-			* by-variable is numeric => use tab
-			tempname byvalmatrix
-			qui tab `by' if `touse', nofreq matrow(`byvalmatrix')
-			
-			local bynum=r(r)
-			forvalues i=1/`bynum' {
-				local byvals `byvals' `=`byvalmatrix'[`i',1]'
-			}
+		if _rc {
+			* by-variable is string => generate a numeric version
+			tempvar by
+			tempname bylabel
+			egen `by'=group(`byvarname'), lname(`bylabel')
 		}
-		else {
-			* by-variable is string => use levelsof (which is much slower)
-			quietly levelsof `by' if `touse'
-			local byvals `"`r(levels)'"'
-			local bynum : word count `r(levels)'
+		
+		tempname byvalmatrix
+		qui tab `by' if `touse', nofreq matrow(`byvalmatrix')
+		
+		local bynum=r(r)
+		forvalues i=1/`bynum' {
+			local byvals `byvals' `=`byvalmatrix'[`i',1]'
 		}
-		local bystring=_rc
 	}
 	else local bynum=1
+	
 
-	*** Create residuals (if needed)
+	****** Create residuals  ******
 	
 	if (`"`controls'`absorb'"'!="") quietly {
 	
@@ -213,7 +207,8 @@ program define binscatter, eclass
 	}
 
 
-	*** Regressions for fit lines
+	****** Regressions for fit lines ******
+	
 	if ("`reportreg'"=="") local reg_verbosity "quietly"
 
 	if inlist("`linetype'","lfit","qfit") `reg_verbosity' {
@@ -244,21 +239,23 @@ program define binscatter, eclass
 				* display text headers
 				if "`reportreg'"!="" {
 					di "{txt}{hline}"
-					if ("`by'"!="") di "-> `by' = `byval'"
+					if ("`by'"!="") {
+						if ("`bylabel'"=="") di "-> `byvarname' = `byval'"
+						else {
+							di "-> `byvarname' = `: label `bylabel' `byval''"
+						}
+					}
 					if ("`rd'"!="") {
-						if (`counter_rd'==1) di "RD: x<=`1'"
-						else if ("`2'"!="") di "RD: x>`1' & x<=`2'"
-						else di "RD: x>`1'"
+						if (`counter_rd'==1) di "RD: `x_var'<=`1'"
+						else if ("`2'"!="") di "RD: `x_var'>`1' & `x_var'<=`2'"
+						else di "RD: `x_var'>`1'"
 					}
 				}
 				
 				* set conditions on reg
 				local conds `touse'
 				
-				if ("`by'"!="" ) {
-					if (`bystring'==0) local conds `conds' & `by'==`byval'
-					else local conds `conds' & `by'=="`byval'"
-				}
+				if ("`by'"!="" ) local conds `conds' & `by'==`byval'
 				
 				if ("`rd'"!="") {
 					if (`counter_rd'==1) local conds `conds' & `x_r'<=`1'
@@ -326,128 +323,153 @@ program define binscatter, eclass
 	
 	}
 
-	*** Generate variable containing bins of x-var
-	
-	local force_discrete=0
+	******* Define the bins *******
 	
 	* Specify and/or create the xq var, as necessary
 	if "`xq'"=="" {
+
+		if !(`touse_first'==1 & word("`:sortedby'",1)=="`x_r'") sort `touse' `x_r'
 	
 		if "`discrete'"=="" { /* xq() and discrete are not specified */
 			
 			* Check whether the number of unique values > nquantiles, or <= nquantiles
-			capture tab `x_r' if `touse', nofreq
+			capture mata: characterize_unique_vals_sorted("`x_r'",`touse_first',`touse_last',`nquantiles')
 			
-			if (_rc==0 & r(r)<=`nquantiles') { /* number of unique values <= nquantiles, set to discrete */
+			if (_rc==0) { /* number of unique values <= nquantiles, set to discrete */
 				local discrete discrete
-				local force_discrete=1
-				if "`genxq'"!="" {
-					di as text `"note: the x-variable has fewer unique values than the number of bins specified (`nquantiles').  It will therefore be treated as discrete, and genxq() will be ignored"'
+				if ("`genxq'"!="") di as text `"note: the x-variable has fewer unique values than the number of bins specified (`nquantiles').  It will therefore be treated as discrete, and genxq() will be ignored"'
+
+				local xq `x_r'
+				local nquantiles=r(r)
+				if ("`by'"=="") {
+					tempname xq_boundaries xq_values
+					matrix `xq_boundaries'=r(boundaries)		
+					matrix `xq_values'=r(values)
 				}
 			}
-			else if (_rc==134 | r(r)>`nquantiles') { /* number of unique values > nquantiles, perform binning */
+			else if (_rc==134) { /* number of unique values > nquantiles, perform binning */
 				if ("`genxq'"!="") local xq `genxq'
 				else tempvar xq
 	
-				if ("`fastxtile'"!="nofastxtile") fastxtile `xq' = `x_r' `wt' if `touse', nq(`nquantiles') randvar(`randvar') randcut(`randcut') randn(`randn')
-				else xtile `xq' = `x_r' `wt' if `touse', nq(`nquantiles')
+				if ("`fastxtile'"!="nofastxtile") fastxtile `xq' = `x_r' `wt' in `touse_first'/`touse_last', nq(`nquantiles') randvar(`randvar') randcut(`randcut') randn(`randn')
+				else xtile `xq' = `x_r' `wt' in `touse_first'/`touse_last', nq(`nquantiles')
+
+				if ("`by'"=="") {
+					mata: characterize_unique_vals_sorted("`xq'",`touse_first',`touse_last',`nquantiles')
+
+					if (r(r)!=`nquantiles') {
+						di as text "warning: nquantiles(`nquantiles') was specified, but only `r(r)' were generated. see help file under nquantiles() for explanation."
+						local nquantiles=r(r)
+					}
+
+					tempname xq_boundaries xq_values
+					matrix `xq_boundaries'=r(boundaries)		
+					matrix `xq_values'=r(values)
+				}
 			}
 			else {
 				error _rc
 			}
-			
+
 		}
 		
-		if "`discrete'"!="" { /* discrete is specified, xq() & genxq() are not. note that we don't use 'else' here because discrete could be set in the previous conditional */
+		else { /* discrete is specified, xq() & genxq() are not */
 		
-			if ("`controls'`absorb'"!="" & `force_discrete'!=1) di as text "warning: discrete is specified in combination with controls() or absorb(). note that binning takes places after residualization, so the residualized x-variable may contain many more unique values."
+			if ("`controls'`absorb'"!="") di as text "warning: discrete is specified in combination with controls() or absorb(). note that binning takes places after residualization, so the residualized x-variable may contain many more unique values."
+
+			capture mata: characterize_unique_vals_sorted("`x_r'",`touse_first',`touse_last',`=`samplesize'/2')
 		
-			local xq `x_var'
-			tempname xbin_means
-			* set nquantiles var
-			qui tab `xq' if `touse', nofreq matrow(`xbin_means')
-			local nquantiles=r(r)
+			if (_rc==0) {
+				local xq `x_r'
+				local nquantiles=r(r)
+				if ("`by'"=="") {
+					tempname xq_boundaries xq_values
+					matrix `xq_boundaries'=r(boundaries)		
+					matrix `xq_values'=r(values)
+				}
+			}
+			else if (_rc==134) {
+				di as error "discrete specified, but number of unique values is > (sample size/2)"
+				exit 134
+			}
+			else {
+				error _rc
+			}
 		}
 	}
 	else {
-		if ("`controls'`absorb'"!="") di as text "warning: xq() is specified in combination with controls() or absorb(). note that binning takes places after residualization, so the xq variable should contain bins of the residuals."
+
+		if !(`touse_first'==1 & word("`:sortedby'",1)=="`xq'") sort `touse' `xq'
 		
-		* set nquantiles var
-		qui sum `xq' if `touse', meanonly
-		local nquantiles=r(max)
-	}
-
-
-	**************************************
-	
-	* if not discrete, create a vector with the x-var mean for each bin
-	if "`discrete'"=="" {
-		__tab_sum_parse `xq' if `touse' `wt', sum(`x_r') means wrap nolabel noobs
-	
-		tempname xbin_means	
-		if r(r)==`nquantiles' {
-			matrix `xbin_means'=r(yval)
-			local xbin_min=`xbin_means'[1,1]
-			local xbin_max=`xbin_means'[`nquantiles',1]
+		* set nquantiles & boundaries
+		mata: characterize_unique_vals_sorted("`xq'",`touse_first',`touse_last',`=`samplesize'/2')
+		
+		if (_rc==0) {
+			local nquantiles=r(r)
+			if ("`by'"=="") {
+				tempname xq_boundaries xq_values
+				matrix `xq_boundaries'=r(boundaries)		
+				matrix `xq_values'=r(values)
+			}
+		}
+		else if (_rc==134) {
+			di as error "discrete specified, but number of unique values is > (sample size/2)"
+			exit 134
 		}
 		else {
-			* there were fewer quantiles than `nquantiles'.  this can happen with xtile.  ex: "sysuse auto; xtile test=mpg, nq(20); tab test"
-			tempname r_xval r_yval
-			matrix `r_xval'=r(xval)
-			matrix `r_yval'=r(yval)
-			
-			local xbin_min=`r_yval'[1,1]
-			local xbin_max=`r_yval'[`r(r)',1]
-			
-			matrix `xbin_means'=J(`nquantiles',1,.)
-			forvalues i=1/`r(r)' {
-				matrix `xbin_means'[`r_xval'[`i',1],1]=`r_yval'[`i',1]
-			}
-			
+			error _rc
+		}
+	}
+
+	********** Compute scatter points **********
+
+	if ("`by'"!="") {
+		sort `touse' `by' `xq'
+		tempname by_boundaries
+		mata: characterize_unique_vals_sorted("`by'",`touse_first',`touse_last',`bynum')
+		matrix `by_boundaries'=r(boundaries)
+	}
+
+	forvalues b=1/`bynum' {
+		if ("`by'"!="") {
+			mata: characterize_unique_vals_sorted("`xq'",`=`by_boundaries'[`b',1]',`=`by_boundaries'[`b',2]',`nquantiles')
+			tempname xq_boundaries xq_values
+			matrix `xq_boundaries'=r(boundaries)
+			matrix `xq_values'=r(values)
+		}
+		/* otherwise xq_boundaries and xq_values are defined above in the binning code block */
+
+		* Define x-means
+		tempname xbin_means
+		if ("`discrete'"=="discrete") {
+			matrix `xbin_means'=`xq_values'
+		}
+		else {
+			means_in_boundaries `x_r' `wt', bounds(`xq_boundaries')
+			matrix `xbin_means'=r(means)
 		}
 
-	}
-	
-	*** Create matrices containing scatter points for each y-var
-	
-	* LOOP over y-vars
-	local counter_depvar=0
-	foreach depvar of varlist `y_vars_r' {
-		local ++counter_depvar
-	
-		* LOOP over by-vars
-		local counter_by=0
-		if ("`by'"=="") local noby="noby"
-		foreach byval in `byvals' `noby' {
-			local ++counter_by
-		
-			* set conditions
-			local conds `touse'
-			if ("`by'"!="" ) {
-				if (`bystring'==0) local conds `conds' & `by'==`byval'
-				else local conds `conds' & `by'=="`byval'"
-			}
-			
-			* compute tab
-			__tab_sum_parse `xq' if `conds' `wt', sum(`depvar') means wrap nolabel noobs	
-	
+		* LOOP over y-vars to define y-means
+		local counter_depvar=0
+		foreach depvar of varlist `y_vars_r' {
+			local ++counter_depvar
+
+			means_in_boundaries `depvar' `wt', bounds(`xq_boundaries')
+
 			* store to matrix
-			if (`counter_by'==1) {
+			if (`b'==1) {
 				tempname y`counter_depvar'_scatterpts
-				matrix `y`counter_depvar'_scatterpts' = r(xval),r(yval)
+				matrix `y`counter_depvar'_scatterpts' = `xbin_means',r(means)
 			}
 			else {
 				* make matrices conformable before right appending			
-				local rowdiff=rowsof(`y`counter_depvar'_scatterpts')-rowsof(r(xval))
-				if (`rowdiff'==0) matrix `y`counter_depvar'_scatterpts' = `y`counter_depvar'_scatterpts',r(xval),r(yval)
-				if (`rowdiff'>0) matrix `y`counter_depvar'_scatterpts' = `y`counter_depvar'_scatterpts', ( (r(xval),r(yval)) \ J(`rowdiff',2,.) )
-				if (`rowdiff'<0) matrix `y`counter_depvar'_scatterpts' = ( `y`counter_depvar'_scatterpts' \ J(-`rowdiff',colsof(`y`counter_depvar'_scatterpts'),.) ) ,r(xval),r(yval)
+				local rowdiff=rowsof(`y`counter_depvar'_scatterpts')-rowsof(`xbin_means')
+				if (`rowdiff'==0) matrix `y`counter_depvar'_scatterpts' = `y`counter_depvar'_scatterpts',`xbin_means',r(means)
+				else if (`rowdiff'>0)  matrix `y`counter_depvar'_scatterpts' = `y`counter_depvar'_scatterpts', ( (`xbin_means',r(means)) \ J(`rowdiff',2,.) )
+				else /*(`rowdiff'<0)*/ matrix `y`counter_depvar'_scatterpts' = ( `y`counter_depvar'_scatterpts' \ J(-`rowdiff',colsof(`y`counter_depvar'_scatterpts'),.) ) ,`xbin_means',r(means)
 			}
-			
 		}
-		
 	}
-	
 
 	*********** Perform Graphing ***********
 
@@ -514,7 +536,7 @@ program define binscatter, eclass
 				local scatters `scatters' (scatteri
 				if ("`savedata'"!="") {
 					if ("`by'"=="") local savedata_scatters `savedata_scatters' (scatter `depvar' `x_var'
-					else local savedata_scatters `savedata_scatters' (scatter `depvar'_by`counter_by' `x_var'
+					else local savedata_scatters `savedata_scatters' (scatter `depvar'_by`counter_by' `x_var'_by`counter_by'
 				}
 			}
 			else {
@@ -523,10 +545,6 @@ program define binscatter, eclass
 			}
 			
 			while (`xval'!=. & `yval'!=.) {
-			
-				* If the x-var isn't discrete, `xval' currently contains the bin #, and we need to fetch the corresponding mean
-				if (`"`discrete'"'=="") local xval=`xbin_means'[`xval',1]
-				
 				local scatters `scatters' `yval' `xval'
 			
 				local ++row
@@ -546,8 +564,13 @@ program define binscatter, eclass
 				else local legend_labels `legend_labels' lab(`counter_series' `depvar')
 			}
 			else {
-				if (`ynum'==1) local legend_labels `legend_labels' lab(`counter_series' `by'=`byval')			
-				else local legend_labels `legend_labels' lab(`counter_series' `depvar': `by'=`byval')
+				if ("`bylabel'"=="") local byvalname=`byval'
+				else {
+					local byvalname `: label `bylabel' `byval''
+				}
+			
+				if (`ynum'==1) local legend_labels `legend_labels' lab(`counter_series' `byvarname'=`byvalname')
+				else local legend_labels `legend_labels' lab(`counter_series' `depvar': `byvarname'=`byvalname')
 			}
 			if ("`by'"!="" | `ynum'>1) local order `order' `counter_series'
 			
@@ -565,22 +588,17 @@ program define binscatter, eclass
 		local rdnum=wordcount("`rd'")+1
 		
 		tempname fitline_bounds
-		if ("`discrete'"=="") {
-			if ("`rd'"=="") matrix `fitline_bounds'=`xbin_min', `xbin_max'
-			else matrix `fitline_bounds'=`xbin_min', `=subinstr("`rd'"," ",",",.)', `xbin_max'
-		}
-		else {
-			quietly sum `xq' if `touse', meanonly
-			
-			if ("`rd'"=="") matrix `fitline_bounds'=r(min), r(max)
-			else matrix `fitline_bounds'=r(min), `=subinstr("`rd'"," ",",",.)', r(max)
-		}
+		if ("`rd'"=="") matrix `fitline_bounds'=.,.
+		else matrix `fitline_bounds'=.,`=subinstr("`rd'"," ",",",.)',.
 
 		* LOOP over by-vars
 		local counter_by=0
 		if ("`by'"=="") local noby="noby"
 		foreach byval in `byvals' `noby' {
 			local ++counter_by
+			
+			** Set the column for the x-coords in the scatterpts matrix
+			local xind=`counter_by'*2-1
 			
 			* Set the row to start seeking from
 			*     note: each time we seek a coeff, it should be from row (rd_num)(counter_by-1)+counter_rd
@@ -592,6 +610,17 @@ program define binscatter, eclass
 			foreach depvar of varlist `y_vars_r' {
 				local ++counter_depvar
 				local ++c
+				
+				* Find lower and upper bounds for the fit line
+				matrix `fitline_bounds'[1,1]=`y`counter_depvar'_scatterpts'[1,`xind']
+				
+				local fitline_ub_rindex=`nbins'
+				local fitline_ub=.
+				while `fitline_ub'==. {
+					local fitline_ub=`y`counter_depvar'_scatterpts'[`fitline_ub_rindex',`xind']
+					local --fitline_ub_rindex
+				}
+				matrix `fitline_bounds'[1,`rdnum'+1]=`fitline_ub'
 		
 				* LOOP over rd intervals
 				forvalues counter_rd=1/`rdnum' {
@@ -628,6 +657,8 @@ program define binscatter, eclass
 	if ("`savedata'"!="") local savedata_graphcmd twoway `savedata_scatters' `fits', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
 	`graphcmd'
 	
+	****** Save results ******
+	
 	* Save graph
 	if `"`savegraph'"'!="" {
 		* check file extension using a regular expression
@@ -641,18 +672,27 @@ program define binscatter, eclass
 	if ("`savedata'"!="") {
 	
 		*** Save a CSV containing the scatter points
-	
-		file open __savedata using `"`savedata'.csv"', write text `replace'
+		tempname savedatafile
+		file open `savedatafile' using `"`savedata'.csv"', write text `replace'
 		
 		* LOOP over rows
 		forvalues row=0/`nquantiles' {
 		
-			* x-var
-			if (`row'==0) file write __savedata "`x_var'"
-			else {
-				local cur_xval=`xbin_means'[`row',1]
-				file write __savedata (`cur_xval')
+			*** Put the x-variable at the left
+			* LOOP over by-vals
+			forvalues counter_by=1/`bynum' {
+			
+				if (`row'==0) { /* write variable names */
+					if "`by'"!="" local bynlabel _by`counter_by'
+					file write `savedatafile' "`x_var'`bynlabel',"
+				}
+				else { /* write data values */
+					if (`row'<=`=rowsof(`y1_scatterpts')') file write `savedatafile' (`y1_scatterpts'[`row',`counter_by'*2-1]) ","
+					else file write `savedatafile' ".,"
+				}
 			}
+			
+			*** Now y-variables at the right
 			
 			* LOOP over y-vars
 			local counter_depvar=0
@@ -662,64 +702,56 @@ program define binscatter, eclass
 				* LOOP over by-vals
 				forvalues counter_by=1/`bynum' {
 				
-					if (`row'==0) {
-						if "`by'"=="" file write __savedata ",`depvar'"
-						else file write __savedata ",`depvar'_by`counter_by'"
-						local shift_y`counter_depvar'_by`counter_by'=0
+				
+					if (`row'==0) { /* write variable names */
+						if "`by'"!="" local bynlabel _by`counter_by'
+						file write `savedatafile' "`depvar'`bynlabel'"
 					}
-					else {
-						local cur_row=`row'+`shift_y`counter_depvar'_by`counter_by''
-
-						if (`cur_row'<=`=rowsof(`y`counter_depvar'_scatterpts')') {
+					else { /* write data values */
+						if (`row'<=`=rowsof(`y`counter_depvar'_scatterpts')') file write `savedatafile' (`y`counter_depvar'_scatterpts'[`row',`counter_by'*2])
+						else file write `savedatafile' "."
+					}
 					
-							* Check if x-value matches the current one being processed
-							local xval=`y`counter_depvar'_scatterpts'[`cur_row',`counter_by'*2-1]
-							if ("`discrete'"=="" & `xval'==`row') | ("`discrete'"!="" & `xval'==`cur_xval') {
-								* x-value is correct, write the y-value to the csv
-								file write __savedata "," (`y`counter_depvar'_scatterpts'[`cur_row',`counter_by'*2])
-							}
-							else {
-								* x-value is incorrect, shift the index so that it is tried again
-								local --shift_y`counter_depvar'_by`counter_by'
-								file write __savedata ",."
-							}
-						}
-						else file write __savedata ",."
-					}
+					* unless this is the last variable in the dataset, add a comma
+					if !(`counter_depvar'==`ynum' & `counter_by'==`bynum') file write `savedatafile' ","
 					
 				} /* end by-val loop */
 				
 			} /* end y-var loop */
 			
-			file write __savedata _n
+			file write `savedatafile' _n
 			
 		} /* end row loop */
 
-		file close __savedata
+		file close `savedatafile'
 		di as text `"(file `savedata'.csv written containing saved data)"'
 		
 		
 		
 		*** Save a do-file with the commands to generate a nicely labeled dataset and re-create the binscatter graph
 		
-		file open __savedata using `"`savedata'.do"', write text `replace'
+		file open `savedatafile' using `"`savedata'.do"', write text `replace'
 		
-		file write __savedata `"insheet using `savedata'.csv"' _n _n
+		file write `savedatafile' `"insheet using `savedata'.csv"' _n _n
 		
 		if "`by'"!="" {
-			foreach depvar of varlist `y_vars' {
+			foreach var of varlist `x_var' `y_vars' {
 				local counter_by=0
 				foreach byval in `byvals' {
 					local ++counter_by
-					file write __savedata `"label variable `depvar'_by`counter_by' "`depvar'; `by'==`byval'""' _n
+					if ("`bylabel'"=="") local byvalname=`byval'
+					else {
+						local byvalname `: label `bylabel' `byval''
+					}
+					file write `savedatafile' `"label variable `var'_by`counter_by' "`var'; `byvarname'==`byvalname'""' _n
 				}
 			}
-			file write __savedata _n
+			file write `savedatafile' _n
 		}
 		
-		file write __savedata `"`savedata_graphcmd'"' _n
+		file write `savedatafile' `"`savedata_graphcmd'"' _n
 		
-		file close __savedata
+		file close `savedatafile'
 		di as text `"(file `savedata'.do written containing commands to process saved data)"'
 		
 	}
@@ -727,8 +759,7 @@ program define binscatter, eclass
 	*** Return items
 	ereturn post, esample(`touse')
 	
-	qui count if e(sample)
-	ereturn scalar N = r(N)
+	ereturn scalar N = `samplesize'
 	
 	ereturn local graphcmd `"`graphcmd'"'
 	if inlist("`linetype'","lfit","qfit") {
@@ -749,8 +780,7 @@ program define binscatter, eclass
 		ereturn matrix rdintervals=`rdintervals'
 	}
 	
-	capture confirm matrix `byvalmatrix'
-	if (_rc==0) {
+	if ("`by'"!="" & "`by'"=="`byvarname'") { /* if a numeric by-variable was specified */
 		forvalues i=1/`=rowsof(`byvalmatrix')' {
 			local byvalmatrix_labels `byvalmatrix_labels' by`i'
 		}
@@ -766,82 +796,23 @@ end
 
 * Helper programs
 
-program define __tab_sum_parse, rclass
+program define means_in_boundaries, rclass
 	version 12.1
-	
-	syntax anything(everything equalok name=cmd id="command") [aweight fweight], [*]
 
-	* Create convenient weight local
-	if ("`weight'"!="") local wt [`weight'`exp']
+	syntax varname(numeric) [aweight fweight iweight], BOUNDsmat(name)
 	
-	* Start the log
-	tempfile log_file
-	capture log close __tab_log
-	quietly log using `log_file', name(__tab_log) replace text
+	local r=rowsof(`boundsmat')
+	matrix means=J(`r',1,.)
 	
-	* Run -tab, sum()- command
-	noisily tab `cmd' `wt', `options'
-	
-	* Close the log
-	qui log close __tab_log
-	
-	* Open the log to be read
-	capture file close __tab_log
-	file open __tab_log using `log_file', read
-	file read __tab_log line
-	
-	if "`line'"=="no observations" {
-		tempname nullmatrix
-		matrix `nullmatrix'=.
-		
-		return scalar r=0
-		return matrix yval=`nullmatrix', copy
-		return matrix xval=`nullmatrix'
-	}
-	else {
-		* Find the top crossline of the table
-		tokenize `"`line'"', parse("|")
-		while (`"`1'"'!="------------+------------" | `"`2'"'!="") & r(eof)==0 {
-			file read __tab_log line
-			tokenize `"`line'"', parse("|")
-		}
-	
-		* Load the table into the matrices until we reach the bottom crossline of the table
-		tempname xval yval
-		
-		local firstloop=1
-		
-	
-		file read __tab_log line
-		tokenize `"`line'"', parse("|")
-	
-		while (`"`1'"'!="------------+------------" | `"`2'"'!="") & r(eof)==0 {
-		
-			if (`firstloop'==1) {
-				matrix `xval'=real(subinstr("`1'",",","",.))
-				matrix `yval'=real(subinstr("`3'",",","",.))
-			}
-			else {
-				matrix `xval'=`xval' \ real(subinstr("`1'",",","",.))
-				matrix `yval'=`yval' \ real(subinstr("`3'",",","",.))
-			}
-	
-			file read __tab_log line
-			tokenize `"`line'"', parse("|")
-			
-			local firstloop=0
-		}
-		
-		* Return the parsed matrices with -tab, sum() results-
-		return scalar r = rowsof(`xval')
-		return matrix yval=`yval'
-		return matrix xval=`xval'
+	forvalues i=1/`r' {
+		sum `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]', meanonly
+		matrix means[`i',1]=r(mean)
 	}
 	
-	file close __tab_log
-	
+	return clear
+	return matrix means=means
+
 end
-
 
 *** copy of: version 1.21  8oct2013  Michael Stepner, stepner@mit.edu
 program define fastxtile, rclass
@@ -996,5 +967,69 @@ program define fastxtile, rclass
 	forvalues i=`=`nquantiles'-1'(-1)1 {
 		return scalar r`i' = ``i''
 	}
+
+end
+
+
+version 12.1
+set matastrict on
+
+mata:
+
+void characterize_unique_vals_sorted(string scalar var, real scalar first, real scalar last, real scalar maxuq) {
+	// Inputs: a numeric variable, a starting & ending obs #, and a maximum number of unique values
+	// Requires: the data to be sorted on the specified variable within the observation boundaries given
+	//				(no check is made that this requirement is satisfied)
+	// Returns: the number of unique values found
+	//			the unique values found
+	//			the observation boundaries of each unique value in the dataset
+	
+	
+	// initialize returned results
+	real scalar Nunique
+	Nunique=0
+
+	real matrix values
+	values=J(maxuq,1,.)
+	
+	real matrix boundaries
+	boundaries=J(maxuq,2,.)
+
+	// initialize computations
+	real scalar var_index
+	var_index=st_varindex(var)
+	
+	real scalar curvalue
+	real scalar prevvalue
+	
+	// perform computations
+	real scalar obs
+	for (obs=first; obs<=last; obs++) {
+		curvalue=_st_data(obs,var_index)
+		
+		if (curvalue!=prevvalue) {
+			Nunique++
+			if (Nunique<=maxuq) {
+				prevvalue=curvalue
+				values[Nunique,1]=curvalue
+				boundaries[Nunique,1]=obs
+				if (Nunique>1) boundaries[Nunique-1,2]=obs-1
+			}
+			else {
+				exit(error(134))
+			}
+			
+		}
+	}
+	boundaries[Nunique,2]=last
+	
+	// return results
+	stata("return clear")
+	
+	st_numscalar("r(r)",Nunique)
+	st_matrix("r(values)",values[1..Nunique,.])
+	st_matrix("r(boundaries)",boundaries[1..Nunique,.])
+
+}
 
 end
