@@ -33,6 +33,6 @@ The graph was created using binscatter:
 
 * Finally, binscatter plotted the best linear fit line, constructed from an OLS regession of the y-residuals on the x-residuals.  The slope of the fit line matches the coefficient of the multivariate regression. 
 
-> **Example Source:** Raj Chetty, John N. Friedman, and Jonah E. Rockoff. 2013. "Measuring the Impacts of Teacher I: Evaluating Bias in Teacher Value-Added Estimates." NBER Working Paper 19423. http://obs.rc.fas.harvard.edu/chetty/w19423.pdf
+> **Example Source:** Raj Chetty, John N. Friedman, and Jonah E. Rockoff. 2013. "Measuring the Impacts of Teacher II: Teacher Value-Added and Student Outcomes in Adulthood." NBER Working Paper 19424. http://obs.rc.fas.harvard.edu/chetty/w19424.pdf
 >
 > The graph above is Figure 2a in the paper, and the associated regression is reported in Table 3, Column 1.
