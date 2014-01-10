@@ -1,9 +1,10 @@
 {smcl}
-{* *! version 7.02  24nov2013}{...}
+{* *! version 6.00  29sep2013}{...}
 {viewerjumpto "Syntax" "binscatter##syntax"}{...}
 {viewerjumpto "Description" "binscatter##description"}{...}
 {viewerjumpto "Options" "binscatter##options"}{...}
 {viewerjumpto "Examples" "binscatter##examples"}{...}
+{viewerjumpto "Remarks" "binscatter##remarks"}{...}
 {viewerjumpto "Saved results" "binscatter##saved_results"}{...}
 {viewerjumpto "Author" "binscatter##author"}{...}
 {viewerjumpto "Acknowledgements" "binscatter##acknowledgements"}{...}
@@ -32,8 +33,7 @@ where {it:varlist} is
 {synopthdr :options}
 {synoptline}
 {syntab :Main}
-{synopt :{opth by(varname)}}plot separate series for each group (see {help binscatter##by_notes:important notes below}){p_end}
-{synopt :{opt med:ians}}plot within-bin medians instead of means{p_end}
+{synopt :{opth by(varname)}}plot separate series for each group{p_end}
 
 {syntab :Bins}
 {synopt :{opth n:quantiles(#)}}number of equal-sized bins to be created; default is {bf:20}{p_end}
@@ -43,7 +43,7 @@ where {it:varlist} is
 
 {syntab :Controls}
 {synopt :{opth control:s(varlist)}}residualize the x & y variables on controls before plotting{p_end}
-{synopt :{opth absorb(varname)}}residualize the x & y variables on a categorical variable{p_end}
+{synopt :{opth absorb(varname)}}residualize the x & y variables on categorical variable{p_end}
 {synopt :{opt noa:ddmean}}do not add the mean of each variable back to its residuals{p_end}
 
 {syntab :Fit Line}
@@ -71,7 +71,7 @@ where {it:varlist} is
 {synopt :{opt randn(#)}}number of observations to sample when computing quantile boundaries{p_end}
 {synoptline}
 {p 4 6 2}
-{opt aweight}s and {opt fweight}s are allowed;
+{opt aweight}s, {opt fweight}s, and {opt pweight}s are allowed;
 see {help weight}.
 {p_end}
 
@@ -87,7 +87,6 @@ Binned scatterplots provide a non-parametric way of visualizing the relationship
 With a large number of observations, a scatterplot that plots every data point would become too crowded
 to interpret visually.  {cmd:binscatter} groups the x-axis variable into equal-sized bins, computes the
 mean of the x-axis and y-axis variables within each bin, then creates a scatterplot of these data points.
-The result is a non-parametric visualization of the conditional expectation function.
 
 {pstd}
 {opt binscatter} provides built-in options to control for covariates before plotting the relationship
@@ -100,25 +99,8 @@ on the underlying data, and can automatically handle regression discontinuities 
 
 {dlgtab:Main}
 
-{marker by_notes}{...}
 {phang}{opth by(varname)} plots a separate series for each by-value.  Both numeric and string by-variables
 are supported, but numeric by-variables will have faster run times.
-
-{pmore}Users should be aware of the two ways in which {cmd:binscatter} does not condition on by-values:
-
-{phang3}1) When combined with {opt controls()} or {opt absorb()}, the program residualizes using the restricted model in which each covariate
-has the same coefficient in each by-value sample.  It does not run separate regressions for each by-value.  If you wish to control for 
-covariates using a different model, you can residualize your x- and y-variables beforehand using your desired model then run {cmd:binscatter}
-on the residuals you constructed.
-
-{phang3}2) When not combined with {opt discrete} or {opt xq()}, the program constructs a single set of bins
-using the unconditional quantiles of the x-variable.  It does not bin the x-variable separately for each by-value.
-If you wish to use a different binning procedure (such as constructing equal-sized bins separately for each
-by-value), you can construct a variable containing your desired bins beforehand, then run {cmd:binscatter} with {opt xq()}.
-
-{phang}{opt med:ians} creates the binned scatterplot using the median x- and y-value within each bin, rather than the mean.
-This option only affects the scatter points; it does not, for instance, cause {opt linetype(lfit)}
-to use quantile regression instead of OLS when drawing a fit line.
 
 {dlgtab:Bins}
 
@@ -222,7 +204,7 @@ loads the scatterpoint data, labels the variables, and plots the binscatter grap
 
 {phang}{opt nofastxtile} forces the use of {cmd:xtile} instead of {cmd:fastxtile} to compute bins.  There is no situation where this should
 be necessary or useful.  The {cmd:fastxile} program generates identical results to {cmd:xtile}, but runs faster on large datasets, and has
-additional options for random sampling which may be useful to increase speed.
+additional options for random sampling which may be useful increase speed.
 
 {pmore}{cmd:fastxtile} is built into the {cmd:binscatter} code, but may also be installed
 separately from SSC ({stata ssc install fastxtile:click here to install}) for use outside of {cmd:binscatter}.
@@ -282,6 +264,19 @@ used each age as a discrete bin, since there are fewer than 20 unique values.){p
 
 {pstd} A very different picture emerges.  Let's label this graph nicely.{p_end}
 {phang2}. {stata binscatter wage age, by(race) absorb(occupation) msymbols(O T) xtitle(Age) ytitle(Hourly Wage) legend(lab(1 White) lab(2 Black))}{p_end}
+
+
+{marker remarks}{...}
+{title:Remarks}
+
+{pstd}{cmd:binscatter} cannot be run quietly because of the method it uses to calculate means within bins.
+The most efficient Stata program for doing so is {helpb tabulate, summarize()}, which runs considerably
+faster in large datasets than any alternative. However, {cmd:tabulate, summarize()} does not store its
+results anywhere, except by writing them in the results window.
+
+{pstd} Therefore, when {cmd:binscatter} calculates means within bins it first runs
+{cmd:tabulate, summarize()} noisily, then logs the results to a temporary file and
+parses the log to obtain the desired numbers.
 
 
 {marker saved_results}{...}
