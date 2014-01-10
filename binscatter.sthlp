@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 6.03  9oct2013}{...}
+{* *! version 6.04  9oct2013}{...}
 {viewerjumpto "Syntax" "binscatter##syntax"}{...}
 {viewerjumpto "Description" "binscatter##description"}{...}
 {viewerjumpto "Options" "binscatter##options"}{...}

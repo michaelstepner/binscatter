@@ -1,4 +1,4 @@
-*! version 6.03  9oct2013  Michael Stepner, stepner@mit.edu
+*! version 6.04  9oct2013  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -12,7 +12,7 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 
 
 program define binscatter, eclass
-	version 11
+	version 12.1
 	
 	syntax varlist(min=2 numeric) [if] [in] [aweight fweight], [by(varname) ///
 		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) ///
@@ -767,7 +767,7 @@ end
 * Helper programs
 
 program define __tab_sum_parse, rclass
-	version 11
+	version 12.1
 	
 	syntax anything(everything equalok name=cmd id="command") [aweight fweight], [*]
 
