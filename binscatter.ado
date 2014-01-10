@@ -1,4 +1,4 @@
-*! version 7.00  12oct2013  Michael Stepner, stepner@mit.edu
+*! version 7.01  14oct2013  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -155,6 +155,8 @@ program define binscatter, eclass sortpreserve
 			tempname bylabel
 			egen `by'=group(`byvarname'), lname(`bylabel')
 		}
+		
+		local bylabel `:value label `by'' /*catch value labels for numeric by-vars too*/ 
 		
 		tempname byvalmatrix
 		qui tab `by' if `touse', nofreq matrow(`byvalmatrix')
@@ -614,7 +616,7 @@ program define binscatter, eclass sortpreserve
 				* Find lower and upper bounds for the fit line
 				matrix `fitline_bounds'[1,1]=`y`counter_depvar'_scatterpts'[1,`xind']
 				
-				local fitline_ub_rindex=`nbins'
+				local fitline_ub_rindex=`nquantiles'
 				local fitline_ub=.
 				while `fitline_ub'==. {
 					local fitline_ub=`y`counter_depvar'_scatterpts'[`fitline_ub_rindex',`xind']
