@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 6.02  5oct2013}{...}
+{* *! version 6.03  9oct2013}{...}
 {viewerjumpto "Syntax" "binscatter##syntax"}{...}
 {viewerjumpto "Description" "binscatter##description"}{...}
 {viewerjumpto "Options" "binscatter##options"}{...}
@@ -33,7 +33,7 @@ where {it:varlist} is
 {synopthdr :options}
 {synoptline}
 {syntab :Main}
-{synopt :{opth by(varname)}}plot separate series for each group{p_end}
+{synopt :{opth by(varname)}}plot separate series for each group (see {help binscatter##by_notes:important caveats below}){p_end}
 
 {syntab :Bins}
 {synopt :{opth n:quantiles(#)}}number of equal-sized bins to be created; default is {bf:20}{p_end}
@@ -71,7 +71,7 @@ where {it:varlist} is
 {synopt :{opt randn(#)}}number of observations to sample when computing quantile boundaries{p_end}
 {synoptline}
 {p 4 6 2}
-{opt aweight}s, {opt fweight}s, and {opt pweight}s are allowed;
+{opt aweight}s and {opt fweight}s are allowed;
 see {help weight}.
 {p_end}
 
@@ -100,8 +100,31 @@ on the underlying data, and can automatically handle regression discontinuities 
 
 {dlgtab:Main}
 
+{marker by_notes}{...}
 {phang}{opth by(varname)} plots a separate series for each by-value.  Both numeric and string by-variables
 are supported, but numeric by-variables will have faster run times.
+
+{pmore}It is important to be aware of three ways in which {cmd:binscatter} does not condition on by-values:
+
+{phang3}1) When combined with {opt controls()} or {opt absorb()}, the program residualizes using the restricted model in which each covariate
+has the same coefficient in each by-value sample.  It does not run separate regressions for each by-value.
+
+{phang3}2) When not combined with {opt discrete} or {opt xq()}, the program constructs a single set of bins
+using the unconditional quantiles of the x-variable.  It does not bin the x-variable separately for each by-value.
+
+{phang3}3) When plotting the data, the x-coordinates are the unconditional within-bin means of the x-variable.
+The mean of the x-variable within each bin is not computed separately for each by-value. The plotted points therefore line up vertically.
+
+{pmore}Users who would prefer to condition any of these steps on the by-values could apply one of the following procedures:
+
+{phang3}To address restriction (1), you can residualize your x- and y-variables beforehand using your desired model, then run binscatter on those residuals.
+
+{phang3}To address restriction (2), you can construct the bins beforehand using your desired binning procedure, then run binscatter using {opt xq()}.
+
+{phang3}To address all three restrictions simultaneously, you can run binscatter separately for each by-value, capture the results using {opt savedata()},
+and combine the series afterwards.
+
+{pmore}It is very likely that a future version of binscatter will add options to perform each of these procedures conditional on the by-values.
 
 {dlgtab:Bins}
 
