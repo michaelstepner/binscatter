@@ -162,7 +162,7 @@ so if the sample changes or the control variables change, the bins ought to be r
 To do so, {cmd:binscatter} runs a regression of each variable on the controls, generates the residuals, and adds the sample mean of
 each variable back to its residuals.
 
-{phang}{opth absorb(varname)} absorbs fixed effects in the categorical variable from the x-variable and y-variables before binning and plotting,
+{phang}{opth absorb(varname)} absorbs fixed effects in the categorical variable from the x-variable and y-variables before binning and plotting.
 To do so, {cmd:binscatter} runs an {helpb areg} of each variable with {it:absorb(varname)} and any {opt controls()} specified.  It then generates the
 residuals and adds the sample mean of each variable back to its residuals.
 
