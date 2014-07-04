@@ -10,13 +10,12 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 
 * Why did I include a formal license? Jeff Atwood gives good reasons: http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
 
-* XX: add percentiles() option to documentation
 
 program define binscatter, eclass sortpreserve
 	version 12.1
 	
 	syntax varlist(min=2 numeric) [if] [in] [aweight fweight], [by(varname) ///
-		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) MEDians Percentiles(integer -999) ///
+		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) MEDians ///
 		CONTROLs(varlist numeric ts fv) absorb(varname) noAddmean ///
 		LINEtype(string) rd(numlist ascending) reportreg ///
 		COLors(string) MColors(string) LColors(string) Msymbols(string) ///
@@ -99,16 +98,6 @@ program define binscatter, eclass sortpreserve
 	}
 
 	* Misc checks
-	if (`percentiles'!=-999) {
-		if !inrange(`percentiles',1,99) {
-			di as error "percentiles() must be an integer between 1 and 99"
-			exit 198
-		}
-		if "`medians'"!="" {
-			di as error "Cannot specify both medians and percentiles()"
-			exit 198
-		}
-	}
 	if ("`genxq'"!="" & ("`xq'"!="" | "`discrete'"!="")) | ("`xq'"!="" & "`discrete'"!="") {
 		di as error "Cannot specify more than one of genxq(), xq(), and discrete simultaneously."
 		exit
@@ -457,7 +446,7 @@ program define binscatter, eclass sortpreserve
 			matrix `xbin_means'=`xq_values'
 		}
 		else {
-			means_in_boundaries `x_r' `wt', bounds(`xq_boundaries') `medians' percentiles(`percentiles')
+			means_in_boundaries `x_r' `wt', bounds(`xq_boundaries') `medians'
 			matrix `xbin_means'=r(means)
 		}
 
@@ -466,7 +455,7 @@ program define binscatter, eclass sortpreserve
 		foreach depvar of varlist `y_vars_r' {
 			local ++counter_depvar
 
-			means_in_boundaries `depvar' `wt', bounds(`xq_boundaries') `medians'  percentiles(`percentiles')
+			means_in_boundaries `depvar' `wt', bounds(`xq_boundaries') `medians'
 
 			* store to matrix
 			if (`b'==1) {
@@ -829,20 +818,15 @@ end
 program define means_in_boundaries, rclass
 	version 12.1
 
-	syntax varname(numeric) [aweight fweight], BOUNDsmat(name) [MEDians Percentiles(integer -999)]
+	syntax varname(numeric) [aweight fweight], BOUNDsmat(name) [MEDians]
 	
 	* Create convenient weight local
 	if ("`weight'"!="") local wt [`weight'`exp']
 	
 	local r=rowsof(`boundsmat')
 	matrix means=J(`r',1,.)
-
 	
-	* Compute desired averages
-
-	if ("`medians'"=="medians") local percentiles 50
-	
-	if (`percentiles'==-999) {
+	if ("`medians'"!="medians") {
 		forvalues i=1/`r' {
 			sum `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]' `wt', meanonly
 			matrix means[`i',1]=r(mean)
@@ -850,7 +834,7 @@ program define means_in_boundaries, rclass
 	}
 	else {
 		forvalues i=1/`r' {
-			_pctile `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]' `wt', percentiles(`percentiles')
+			_pctile `varlist' in `=`boundsmat'[`i',1]'/`=`boundsmat'[`i',2]' `wt', percentiles(50)
 			matrix means[`i',1]=r(r1)
 		}
 	}
