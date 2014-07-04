@@ -310,8 +310,7 @@ program define binscatter, eclass sortpreserve
 					else matrix rownames e_b_temp = "="
 					
 					* save to y_var matrix
-					if (`counter_by'==1 & `counter_rd'==1) matrix `y`counter_depvar'_coefs'=e_b_temp
-					else matrix `y`counter_depvar'_coefs'=`y`counter_depvar'_coefs' \ e_b_temp
+					matrix `y`counter_depvar'_coefs'=nullmat(`y`counter_depvar'_coefs') \ e_b_temp
 					
 					* increment depvar counter
 					local ++counter_depvar
@@ -637,24 +636,42 @@ program define binscatter, eclass sortpreserve
 		
 				* LOOP over rd intervals
 				forvalues counter_rd=1/`rdnum' {
+					tempname coef_current
+					matrix `coef_current'=`y`counter_depvar'_coefs'[`row0'+`counter_rd',1...]
 					
-					if (`"`linetype'"'=="lfit") {
-						local coef_quad=0
-						local coef_lin=`y`counter_depvar'_coefs'[`row0'+`counter_rd',1]
-						local coef_cons=`y`counter_depvar'_coefs'[`row0'+`counter_rd',2]
-					}
-					else if (`"`linetype'"'=="qfit") {
-						local coef_quad=`y`counter_depvar'_coefs'[`row0'+`counter_rd',1]
-						local coef_lin=`y`counter_depvar'_coefs'[`row0'+`counter_rd',2]
-						local coef_cons=`y`counter_depvar'_coefs'[`row0'+`counter_rd',3]
-					}
-					
-					if !missing(`coef_quad',`coef_lin',`coef_cons') {
+					* the coefs are set to missing if a regression failed (e.g. no observations in one of the RD segments)
+					if !matmissing(`coef_current') {
+				
 						local leftbound=`fitline_bounds'[1,`counter_rd']
 						local rightbound=`fitline_bounds'[1,`counter_rd'+1]
-					
-						local fits `fits' (function `coef_quad'*x^2+`coef_lin'*x+`coef_cons', range(`leftbound' `rightbound') lcolor(`: word `c' of `lcolors''))
-					}
+						
+						tempname fitline_xvals fitline_yvals
+						
+						if (`"`linetype'"'=="lfit") {
+							local coef_lin `y`counter_depvar'_coefs'[`row0'+`counter_rd',1]
+							local coef_cons `y`counter_depvar'_coefs'[`row0'+`counter_rd',2]
+							
+							matrix `fitline_xvals'=(`leftbound' \ `rightbound')
+							matrix `fitline_yvals'=`coef_lin' * `fitline_xvals' + (`coef_cons' \ `coef_cons')
+						}
+						else if (`"`linetype'"'=="qfit") {
+							local coef_quad=`y`counter_depvar'_coefs'[`row0'+`counter_rd',1]
+							local coef_lin=`y`counter_depvar'_coefs'[`row0'+`counter_rd',2]
+							local coef_cons=`y`counter_depvar'_coefs'[`row0'+`counter_rd',3]
+							
+							mata: statavec_linspace("`fitline_xvals'", `leftbound', `rightbound', 300)
+							mata: statavec_quadratic("`fitline_yvals'","`fitline_xvals'",`coef_quad',`coef_lin',`coef_cons')
+						}
+						
+						local fits `fits' (scatteri
+						
+						forvalues r=1/`=rowsof(`fitline_xvals')' {
+							local fits `fits' `=`fitline_yvals'[`r',1]' `=`fitline_xvals'[`r',1]'
+						}
+						
+						local fits `fits', recast(line) lcolor(`: word `c' of `lcolors''))
+						
+					}	
 				}
 			}
 		}
@@ -1058,6 +1075,27 @@ void characterize_unique_vals_sorted(string scalar var, real scalar first, real 
 	st_numscalar("r(r)",Nunique)
 	st_matrix("r(values)",values[1..Nunique,.])
 	st_matrix("r(boundaries)",boundaries[1..Nunique,.])
+
+}
+
+
+void statavec_linspace(string scalar name, real scalar first, real scalar last, real scalar len) {
+
+	real colvector outvec
+	outvec=first :+ (0::len-1) * (last-first)/(len-1)
+	
+	st_matrix(name,outvec)
+
+}
+
+void statavec_quadratic(string scalar outname, string scalar xmat, real scalar a, real scalar b, real scalar c) {
+	
+	real colvector xvals
+	xvals=st_matrix(xmat)
+	
+	real colvector outvec
+	outvec=a * xvals:^2 + b * xvals :+ c
+	st_matrix(outname,outvec)
 
 }
 
