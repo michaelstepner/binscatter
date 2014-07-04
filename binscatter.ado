@@ -860,7 +860,7 @@ program define means_in_boundaries, rclass
 
 end
 
-*** copy of: version 1.21  8oct2013  Michael Stepner, stepner@mit.edu
+*** copy of: version 1.22  4jul2014  Michael Stepner, stepner@mit.edu
 program define fastxtile, rclass
 	version 11
 
@@ -994,8 +994,8 @@ program define fastxtile, rclass
 	}
 
 	* Pick data type for quantile variable
-	if (`nquantiles'<=100) local qtype byte
-	else if (`nquantiles'<=32,740) local qtype int
+	if (`nquantiles'<=maxbyte()) local qtype byte
+	else if (`nquantiles'<=maxint()) local qtype int
 	else local qtype long
 
 	* Create quantile variable
