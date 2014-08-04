@@ -821,7 +821,7 @@ end
 
 **********************************
 
-* Helper programs
+*** Helper programs
 
 program define _parse_addplot, sclass
 	version 12.1
@@ -1109,7 +1109,6 @@ end
 
 
 *** binscatter Mata utilities
-
 
 version 12.1
 set matastrict on
