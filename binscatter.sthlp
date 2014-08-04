@@ -56,6 +56,7 @@ where {it:varlist} is
 {synopt :{cmdab:mc:olors(}{it:{help colorstyle}list}{cmd:)}}overriding ordered list of colors for the markers{p_end}
 {synopt :{cmdab:lc:olors(}{it:{help colorstyle}list}{cmd:)}}overriding ordered list of colors for the lines{p_end}
 {synopt :{cmdab:m:symbols(}{it:{help symbolstyle}list}{cmd:)}}ordered list of symbols{p_end}
+{synopt :{opth "addplot(graph_twoway:plots)"}}add other twoway plots to the graph{p_end}
 {synopt :{it:{help twoway_options}}}{help title options:titles}, {help legend option:legends}, {help axis options:axes}, added {help added line options:lines} and {help added text options:text},
 	{help region options:regions}, {help name option:name}, {help aspect option:aspect ratio}, etc.{p_end}
 
@@ -196,6 +197,15 @@ Specifically, a bin may contain a discontinuity within its range, and therefore 
 {phang}{cmdab:lc:olors(}{it:{help colorstyle}list}{cmd:)} specifies an ordered list of colors for the line of each series, which overrides any list provided in {opt colors()}
 
 {phang}{cmdab:m:symbols(}{it:{help symbolstyle}list}{cmd:)} specifies an ordered list of symbols for each series
+
+{phang}{opth "addplot(graph_twoway:plots)"} adds additional twoway plots to the generated graph.
+These additional plots should be specified using standard twoway graph syntax; see {manhelpi addplot_option G-3} for details.
+
+{pmore}You can control whether each added plot is drawn above or below the binned scatterplot by adding {cmd:below} as a graph option:
+
+{phang3}{cmd:addplot(}{it:plots}{cmd:,} {cmd:below}{cmd:)} places all added plots below the binned scatterplot.
+
+{phang3}{cmd:addplot(}{it:(plot1)} {it:(plot2}{cmd:,} {cmd:below}{it:)}{cmd:)} places {it:plot1} above the binned scatterplot and {it:plot2} below.
 
 {phang}{it:{help twoway_options}}:
 
