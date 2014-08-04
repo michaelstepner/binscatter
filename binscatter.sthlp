@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 7.02  24nov2013}{...}
+{* *! version 7.XX  XXnov2013}{...}
 {viewerjumpto "Syntax" "binscatter##syntax"}{...}
 {viewerjumpto "Description" "binscatter##description"}{...}
 {viewerjumpto "Options" "binscatter##options"}{...}
@@ -214,7 +214,7 @@ and either {cmd:graph save} or {cmd:graph export} is run.  If no file extension 
 {phang}{opt savedata(filename)} saves {it:filename}{bf:.csv} containing the binned scatterpoint data, and {it:filename}{bf:.do} which
 loads the scatterpoint data, labels the variables, and plots the binscatter graph.
 
-{pmore}Note that the saved result {bf:e(cmd)} provides an alternative way of capturing the binscatter graph and editing it.
+{pmore}Note that the saved result {bf:e(graphcmd)} provides an alternative way of capturing the binscatter graph and editing it.
 
 {phang}{opt replace} specifies that files be overwritten if they alredy exist
 
@@ -231,13 +231,13 @@ separately from SSC ({stata ssc install fastxtile:click here to install}) for us
 sample of observations when computing the quantile boundaries.  Sampling increases
 the speed of the binning procedure, but generates bins which are only approximately equal-sized
 due to sampling error.  It is possible to omit this option and still perform random sampling from U[0,1]
-as described below in {opt randcut()} and {opt randn()}.
+as described below in {opt randcut(#)} and {opt randn(#)}.
 
 {phang}{opt randcut(#)} specifies the upper bound on the variable contained
 in {opt randvar(varname)}. Quantile boundaries are approximated using observations for which
 {opt randvar()} <= #.  If no variable is specified in {opt randvar()},
 a standard uniform random variable is generated. The default is {cmd:randcut(1)}.
-This option cannot be combined with {opt randn()}.
+This option cannot be combined with {opt randn(#)}.
 
 {phang}{opt randn(#)} specifies an approximate number of observations to sample when
 computing the quantile boundaries. Quantile boundaries are approximated using observations
@@ -245,7 +245,7 @@ for which a uniform random variable is <= #/N. The exact number of observations
 sampled may therefore differ from #, but it equals # in expectation. When this option is
 combined with {opth randvar(varname)}, {it:varname} ought to be distributed U[0,1].
 Otherwise, a standard uniform random variable is generated. This option cannot be combined
-with {opt randcut()}.
+with {opt randcut(#)}.
 
 
 {marker examples}{...}
@@ -297,8 +297,7 @@ used each age as a discrete bin, since there are fewer than 20 unique values.){p
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{cmd:e(graphcmd)}}twoway command used to generate graph, which does not depend on loaded data{p_end}
-{p 30 30 2}Note: it is often important to reference this result using `"`{bf:e(graphcmd)}'"'
-rather than {bf:e(graphcmd)} in order to avoid truncation due to Stata's character limit for strings.
+{p 30 30 2}Note: it is often important to reference this result using `"`{bf:e(graphcmd)}'"' in order to avoid truncation due to Stata's character limit for strings.
 
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Matrices}{p_end}
@@ -322,7 +321,7 @@ rather than {bf:e(graphcmd)} in order to avoid truncation due to Stata's charact
 {marker acknowledgements}{...}
 {title:Acknowledgements}
 
-{pstd}The present version of {cmd:binscatter} is based on a program first written by Jessica Laird.
+{pstd}{cmd:binscatter} is based on a program first written by Jessica Laird.
 
 {pstd}This program was developed under the guidance and direction of Raj Chetty and John
 Friedman.  Laszlo Sandor provided suggestions which improved the program considerably, and offered abundant help
