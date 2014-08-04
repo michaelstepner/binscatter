@@ -10,9 +10,6 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 
 * Why did I include a formal license? Jeff Atwood gives good reasons: http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
 
-* XX document new option addplot(): does not get saved in savedata(). mention that it supports putting some plots on top and some behind, which hist does not.
-
-
 program define binscatter, eclass sortpreserve
 	version 12.1
 	
