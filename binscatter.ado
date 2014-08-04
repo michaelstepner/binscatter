@@ -10,7 +10,7 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 
 * Why did I include a formal license? Jeff Atwood gives good reasons: http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
 
-* XX document new option addplot(): does not get saved in savedata()
+* XX document new option addplot(): does not get saved in savedata(). mention that it supports putting some plots on top and some behind, which hist does not.
 
 
 program define binscatter, eclass sortpreserve
@@ -123,10 +123,10 @@ program define binscatter, eclass sortpreserve
 		exit
 	}
 	if `"`addplot'"'!="" {
-		_parse_addplot `addplot'
+		_parse_addplot, addplot(`addplot')
 		
-		if ("`s(below)'"=="below") local addplot_below `s(plots)' ||
-		else local addplot_above || `s(plots)' ||
+		if (`"`s(addplot_below)'"'!="") local addplot_below `s(addplot_below)' ||
+		if (`"`s(addplot_above)'"'!="") local addplot_above || `s(addplot_above)' ||
 	}
 	if "`replace'"=="" {
 		if `"`savegraph'"'!="" {
@@ -682,8 +682,6 @@ program define binscatter, eclass sortpreserve
 	* Display graph
 	local graphcmd twoway `addplot_below' `scatters' `fits' `addplot_above', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
 	if ("`savedata'"!="") local savedata_graphcmd twoway `savedata_scatters' `fits', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
-*	di `"`graphcmd'"'
-*	exit
 	`graphcmd'
 	
 	****** Save results ******
@@ -826,14 +824,60 @@ end
 * Helper programs
 
 program define _parse_addplot, sclass
-	syntax anything(everything equalok name=plots id="added plots"), [below *]
+	version 12.1
+	syntax, addplot(string asis)
+	
+	* Parse graph commands
+	_parse expand plot global : addplot
+		
+	* Check for global "below", which applies to all added plots	
+	local 0 ,`global_op'
+	syntax, [below *]
+	if ("`below'"=="below") {
+	
+		* Strip "below" out of individual plots' options and the global options [binscatter manually handles placing plots below]
+		_parse expand plot global : addplot, common(below)
+		local 0 ,`global_op'
+		syntax, [below *]
+		local global_op `options'
+		
+		* Output
+		_parse canonicalize addplot_below : plot global
+	
+	}
+	else {
+		* Initialize two sets of plots: 'above' plots and 'below' plots
+		local aplot_n=0
+		local bplot_n=0
+		
+		* Check for "below" plot-by-plot, and send each plot to the correct set
+		forvalues i=1/`plot_n' {
+			_parse comma plot_cmd plot_op : plot_`i'
+		
+			local 0 `plot_op'
+			syntax, [below *]
+			if ("`below'"=="below") {
+				local ++bplot_n
+				if (`"`options'"'=="") local bplot_`bplot_n' `plot_cmd'
+				else local bplot_`bplot_n' `plot_cmd', `options'
+			}
+			else {
+				local ++aplot_n
+				if (`"`options'"'=="") local aplot_`aplot_n' `plot_cmd'
+				else local aplot_`aplot_n' `plot_cmd', `options'
+			}
+		}
+		
+		_parse canonicalize addplot_below : bplot global
+		_parse canonicalize addplot_above : aplot global
+		
+		
+	}
 	
 	sreturn clear
+	sreturn local addplot_below `addplot_below'
+	sreturn local addplot_above `addplot_above'
 	
-	sreturn local below `below'
-	
-	if `"`options'"'=="" sreturn local plots `plots'
-	else sreturn local plots `plots', `options'
 end
 
 
