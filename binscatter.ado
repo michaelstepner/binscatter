@@ -10,6 +10,8 @@ human-readable summary can be accessed at http://creativecommons.org/publicdomai
 
 * Why did I include a formal license? Jeff Atwood gives good reasons: http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
 
+* XX document new option addplot(): does not get saved in savedata()
+
 
 program define binscatter, eclass sortpreserve
 	version 12.1
@@ -18,7 +20,7 @@ program define binscatter, eclass sortpreserve
 		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) MEDians ///
 		CONTROLs(varlist numeric ts fv) absorb(varname) noAddmean ///
 		LINEtype(string) rd(numlist ascending) reportreg ///
-		COLors(string) MColors(string) LColors(string) Msymbols(string) ///
+		COLors(string) MColors(string) LColors(string) Msymbols(string) addplot(string asis) ///
 		savegraph(string) savedata(string) replace ///
 		nofastxtile randvar(varname numeric) randcut(real 1) randn(integer -1) ///
 		/* LEGACY OPTIONS */ nbins(integer 20) create_xq x_q(varname numeric) symbols(string) method(string) unique(string) ///
@@ -119,6 +121,12 @@ program define binscatter, eclass sortpreserve
 	if "`reportreg'"!="" & !inlist("`linetype'","lfit","qfit") {
 		di as error "Cannot specify 'reportreg' when no fit line is being created."
 		exit
+	}
+	if `"`addplot'"'!="" {
+		_parse_addplot `addplot'
+		
+		if ("`s(below)'"=="below") local addplot_below `s(plots)' ||
+		else local addplot_above || `s(plots)' ||
 	}
 	if "`replace'"=="" {
 		if `"`savegraph'"'!="" {
@@ -672,8 +680,10 @@ program define binscatter, eclass sortpreserve
 	else local ytitle : subinstr local y_vars " " "; ", all
 
 	* Display graph
-	local graphcmd twoway `scatters' `fits', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
+	local graphcmd twoway `addplot_below' `scatters' `fits' `addplot_above', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
 	if ("`savedata'"!="") local savedata_graphcmd twoway `savedata_scatters' `fits', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
+*	di `"`graphcmd'"'
+*	exit
 	`graphcmd'
 	
 	****** Save results ******
@@ -814,6 +824,18 @@ end
 **********************************
 
 * Helper programs
+
+program define _parse_addplot, sclass
+	syntax anything(everything equalok name=plots id="added plots"), [below *]
+	
+	sreturn clear
+	
+	sreturn local below `below'
+	
+	if `"`options'"'=="" sreturn local plots `plots'
+	else sreturn local plots `plots', `options'
+end
+
 
 program define means_in_boundaries, rclass
 	version 12.1
