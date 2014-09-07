@@ -226,7 +226,7 @@ loads the scatterpoint data, labels the variables, and plots the binscatter grap
 
 {pmore}Note that the saved result {bf:e(graphcmd)} provides an alternative way of capturing the binscatter graph and editing it.
 
-{phang}{opt replace} specifies that files be overwritten if they alredy exist
+{phang}{opt replace} specifies that files be overwritten if they already exist.
 
 {dlgtab:fastxtile options}
 
