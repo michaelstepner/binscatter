@@ -1,0 +1,4 @@
+v 3
+d binscatter development repository
+d by Michael Stepner (stepner@mit.edu)
+p binscatter module to generate binned scatterplots
