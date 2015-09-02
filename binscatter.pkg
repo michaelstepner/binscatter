@@ -1,0 +1,29 @@
+v 3
+d 'BINSCATTER': module to generate binned scatterplots
+d
+d binscatter generates binned scatterplots, and is optimized for
+d speed in large  datasets.  Binned scatterplots provide a
+d non-parametric way of visualizing the relationship between two
+d variables.  With a large number of observations, a scatterplot
+d that plots every data point would become too crowded to interpret
+d visually.  binscatter groups the x-axis variable into equal-sized
+d bins, computes the mean of the x-axis and y-axis variables within
+d each bin, then creates a scatterplot of these data points.  It
+d provides built-in options to control for covariates before
+d plotting the relationship.  It will also plot fit lines based on
+d the underlying data, and can automatically handle regression
+d discontinuities. 
+d
+d KW: scatterplot
+d KW: data description
+d KW: regression discontinuity
+d
+d Requires: Stata version 12.1
+d
+d Distribution-Date: 20150902
+d
+d Author: Michael Stepner
+d Support: email stepner@mit.edu
+d
+f binscatter.ado
+f binscatter.sthlp
