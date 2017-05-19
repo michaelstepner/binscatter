@@ -1,4 +1,4 @@
-*! version 7.XX  XXmay2014  Michael Stepner, stepner@mit.edu
+*! version 8.0.xx  XXmay2014  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -8,7 +8,7 @@ This code is licensed under the CC0 1.0 Universal license.  The full legal text 
 human-readable summary can be accessed at http://creativecommons.org/publicdomain/zero/1.0/
 */
 
-* Why did I include a formal license? Jeff Atwood gives good reasons: http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html
+* Why did I include a formal license? Jeff Atwood gives good reasons: https://blog.codinghorror.com/pick-a-license-any-license/
 
 program define binscatter, eclass sortpreserve
 	version 12.1
@@ -20,7 +20,6 @@ program define binscatter, eclass sortpreserve
 		COLors(string) MColors(string) LColors(string) Msymbols(string) addplot(string asis) ///
 		savegraph(string) savedata(string) replace ///
 		nofastxtile randvar(varname numeric) randcut(real 1) randn(integer -1) ///
-		/* LEGACY OPTIONS */ nbins(integer 20) create_xq x_q(varname numeric) symbols(string) method(string) unique(string) ///
 		*]
 
 	set more off
@@ -28,59 +27,6 @@ program define binscatter, eclass sortpreserve
 	* Create convenient weight local
 	if ("`weight'"!="") local wt [`weight'`exp']
 	
-	***** Begin legacy option compatibility code
-	
-	if (`nbins'!=20) {
-		if (`nquantiles'!=20) {
-			di as error "Cannot specify both nquantiles() and nbins(): both are the same option, nbins is supported only for backward compatibility."
-			exit
-		}
-		di as text "NOTE: legacy option nbins() has been renamed nquantiles(), and is supported only for backward compatibility."
-		local nquantiles=`nbins'
-	}
-	
-	if ("`create_xq'"!="") {
-		if ("`genxq'"!="") {
-			di as error "Cannot specify both genxq() and create_xq: both are the same option, create_xq is supported only for backward compatibility."
-			exit
-		}
-		di as text "NOTE: legacy option create_xq has been renamed genxq(), and is supported only for backward compatibility."
-		local genxq="q_"+word("`varlist'",-1)
-	}
-	
-	if ("`x_q'"!="") {
-		if ("`xq'"!="") {
-			di as error "Cannot specify both xq() and x_q(): both are the same option, x_q() is supported only for backward compatibility."
-			exit
-		}
-		di as text "NOTE: legacy option x_q() has been renamed xq(), and is supported only for backward compatibility."
-		local xq `x_q'
-	}
-	
-	if ("`symbols'"!="") {
-		if ("`msymbols'"!="") {
-			di as error "Cannot specify both msymbols() and symbols(): both are the same option, symbols() is supported only for backward compatibility."
-			exit
-		}
-		di as text "NOTE: legacy option symbols() has been renamed msymbols(), and is supported only for backward compatibility."
-		local msymbols `symbols'
-	}
-	
-	if ("`linetype'"=="noline") {
-		di as text "NOTE: legacy line type 'noline' has been renamed 'none', and is supported only for backward compatibility."
-		local linetype none
-	}
-	
-	if ("`method'"!="") {
-		di as text "NOTE: method() is no longer a recognized option, and will be ignored. binscatter now always uses the fastest method without a need for two instances"
-	}
-	
-	if ("`unique'"!="") {
-		di as text "NOTE: unique() is no longer a recognized option, and will be ignored. binscatter now considers the x-variable discrete if it has fewer unique values than nquantiles()"
-	}
-		
-	***** End legacy option capatibility code
-
 	*** Perform checks
 
 	* Set default linetype and check valid
