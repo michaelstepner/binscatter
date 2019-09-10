@@ -1,4 +1,4 @@
-*! version 7.02  24nov2013  Michael Stepner, stepner@mit.edu
+*! version 7.02.XX  10sep2019  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -18,7 +18,7 @@ program define binscatter, eclass sortpreserve
 		Nquantiles(integer 20) GENxq(name) discrete xq(varname numeric) MEDians ///
 		CONTROLs(varlist numeric ts fv) absorb(varname) noAddmean ///
 		LINEtype(string) rd(numlist ascending) reportreg ///
-		COLors(string) MColors(string) LColors(string) Msymbols(string) ///
+		COLors(string asis) MColors(string asis) LColors(string asis) Msymbols(string) ///
 		savegraph(string) savedata(string) replace ///
 		nofastxtile randvar(varname numeric) randcut(real 1) randn(integer -1) ///
 		/* LEGACY OPTIONS */ nbins(integer 20) create_xq x_q(varname numeric) symbols(string) method(string) unique(string) ///
@@ -488,11 +488,11 @@ program define binscatter, eclass sortpreserve
 		khaki sienna emidblue emerald brown erose gold bluishgray ///
 		/* lime magenta cyan pink blue */
 	if `"`mcolors'"'=="" {
-		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local mcolors `: word 1 of `colors''
+		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local mcolors `: word 1 of `"`colors'"''
 		else local mcolors `colors'
 	}
 	if `"`lcolors'"'=="" {
-		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local lcolors `: word 2 of `colors''
+		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local lcolors `: word 2 of `"`colors'"''
 		else local lcolors `colors'
 	}
 	local num_mcolor=wordcount(`"`mcolors'"')
@@ -555,7 +555,7 @@ program define binscatter, eclass sortpreserve
 			}
 			
 			* Add options
-			local scatter_options `connect' mcolor(`: word `c' of `mcolors'') lcolor(`: word `c' of `lcolors'') `symbol_prefix'`: word `c' of `msymbols''`symbol_suffix'
+			local scatter_options `connect' mcolor(`: word `c' of `"`mcolors'"'') lcolor(`: word `c' of `"`lcolors'"'') `symbol_prefix'`: word `c' of `msymbols''`symbol_suffix'
 			local scatters `scatters', `scatter_options')
 			if ("`savedata'"!="") local savedata_scatters `savedata_scatters', `scatter_options')
 		
@@ -642,7 +642,7 @@ program define binscatter, eclass sortpreserve
 						local leftbound=`fitline_bounds'[1,`counter_rd']
 						local rightbound=`fitline_bounds'[1,`counter_rd'+1]
 					
-						local fits `fits' (function `coef_quad'*x^2+`coef_lin'*x+`coef_cons', range(`leftbound' `rightbound') lcolor(`: word `c' of `lcolors''))
+						local fits `fits' (function `coef_quad'*x^2+`coef_lin'*x+`coef_cons', range(`leftbound' `rightbound') lcolor(`: word `c' of `"`lcolors'"''))
 					}
 				}
 			}
@@ -653,7 +653,7 @@ program define binscatter, eclass sortpreserve
 	if (`ynum'==1) local ytitle `y_vars'
 	else if (`ynum'==2) local ytitle : subinstr local y_vars " " " and "
 	else local ytitle : subinstr local y_vars " " "; ", all
-
+	
 	* Display graph
 	local graphcmd twoway `scatters' `fits', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
 	if ("`savedata'"!="") local savedata_graphcmd twoway `savedata_scatters' `fits', graphregion(fcolor(white)) `xlines' xtitle(`x_var') ytitle(`ytitle') legend(`legend_labels' order(`order')) `options'
