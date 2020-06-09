@@ -1,4 +1,4 @@
-*! version 7.02.XX  10sep2019  Michael Stepner, stepner@mit.edu
+*! version 7.02.XX  8jun2020  Michael Stepner, stepner@mit.edu
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -488,16 +488,16 @@ program define binscatter, eclass sortpreserve
 		khaki sienna emidblue emerald brown erose gold bluishgray ///
 		/* lime magenta cyan pink blue */
 	if `"`mcolors'"'=="" {
-		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local mcolors `: word 1 of `"`colors'"''
-		else local mcolors `colors'
+		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local mcolors `""`: word 1 of `colors''""'
+		else local mcolors `"`colors'"'
 	}
 	if `"`lcolors'"'=="" {
-		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local lcolors `: word 2 of `"`colors'"''
-		else local lcolors `colors'
+		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local lcolors `""`: word 2 of `colors''""'
+		else local lcolors `"`colors'"'
 	}
-	local num_mcolor=wordcount(`"`mcolors'"')
-	local num_lcolor=wordcount(`"`lcolors'"')
-
+	local num_mcolor : word count `mcolors'
+	local num_lcolor : word count `lcolors'
+	
 
 	* Prepare connect & msymbol options
 	if ("`linetype'"=="connect") local connect "c(l)"
@@ -555,7 +555,7 @@ program define binscatter, eclass sortpreserve
 			}
 			
 			* Add options
-			local scatter_options `connect' mcolor(`: word `c' of `"`mcolors'"'') lcolor(`: word `c' of `"`lcolors'"'') `symbol_prefix'`: word `c' of `msymbols''`symbol_suffix'
+			local scatter_options `connect' mcolor("`: word `c' of `mcolors''") lcolor("`: word `c' of `lcolors''") `symbol_prefix'`: word `c' of `msymbols''`symbol_suffix'
 			local scatters `scatters', `scatter_options')
 			if ("`savedata'"!="") local savedata_scatters `savedata_scatters', `scatter_options')
 		
@@ -642,7 +642,7 @@ program define binscatter, eclass sortpreserve
 						local leftbound=`fitline_bounds'[1,`counter_rd']
 						local rightbound=`fitline_bounds'[1,`counter_rd'+1]
 					
-						local fits `fits' (function `coef_quad'*x^2+`coef_lin'*x+`coef_cons', range(`leftbound' `rightbound') lcolor(`: word `c' of `"`lcolors'"''))
+						local fits `fits' (function `coef_quad'*x^2+`coef_lin'*x+`coef_cons', range(`leftbound' `rightbound') lcolor("`: word `c' of `lcolors''"))
 					}
 				}
 			}
