@@ -1,4 +1,4 @@
-*! version 7.02.XX  8jun2020  Michael Stepner, stepner@mit.edu
+*! version 7.02.XX  12jun2020  Michael Stepner, software@michaelstepner.com
 
 /* CC0 license information:
 To the extent possible under law, the author has dedicated all copyright and related and neighboring rights
@@ -483,10 +483,7 @@ program define binscatter, eclass sortpreserve
 	}
 
 	* Fill colors if missing
-	if `"`colors'"'=="" local colors ///
-		navy maroon forest_green dkorange teal cranberry lavender ///
-		khaki sienna emidblue emerald brown erose gold bluishgray ///
-		/* lime magenta cyan pink blue */
+	if `"`colors'"'=="" local colors `" "scheme p1" "scheme p2" "scheme p3" "scheme p4" "scheme p5"	"scheme p6" "scheme p7" "scheme p8" "scheme p9" "scheme p10" "scheme p11" "scheme p12" "scheme p13" "scheme p14" "scheme p15" "'
 	if `"`mcolors'"'=="" {
 		if (`ynum'==1 & `bynum'==1 & "`linetype'"!="connect") local mcolors `""`: word 1 of `colors''""'
 		else local mcolors `"`colors'"'
